@@ -1,0 +1,269 @@
+---
+title: "Exploratory Data Analysis (EDA)"
+author: "Jae Wook Jung"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+---
+
+```{r, echo=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Reading Notes
+
+I did not know there are so many ways to show data with ggplot. I learned lots of functions too such as is.na(), ifelse(), count(), cut_width(), cut_number(), add_residuals(`in modelr`). I learned to examine the distribution of a continuous variable is good to use histogram. And I learned showing multiple histograms with geom_freqpoly(). I also added how to rotate the x-axis. Additionally, I learned that checking NA is important for dataset because it can mislead tp the answer.
+
+## EDA Example
+
+The code below is an example of the EDA process using the `starwars` data from the `tidyverse` package. (Make sure you have the `tidyverse` package installed!)
+
+Run the code line-by-line and look at the output. Add a comment to each line of code that explains what it does/what insights it provides.
+
+```{r}
+library(tidyverse)
+
+dim(starwars) # Shows dimension of dataset. order: row column
+colnames(starwars) # Shows all the column names.
+
+head(starwars) # Shows first 6 dataset.
+glimpse(starwars) # columns become rows.
+
+# ?starwars # Get explanation of dataset.
+
+starwars %>% count(species) # Goes into dataset and counts number of values in a column (in this case species).
+
+sum(is.na(starwars$height)) # Shows numbers of NA's in a column.
+
+mean(starwars$height) # Shows mean value of the column. If the column has a NA's, then it returns "NA."
+mean(starwars$height, na.rm = TRUE) # Shows mean value of the column by removing NA's in the column.
+
+summary(starwars$height) # Shows statistical summary.
+
+cm_to_ft <- function(cm){
+  ft = cm / 30.48
+  return(ft)
+} # A function that changes cm to feet.
+
+starwars_2 <- starwars %>% mutate(height_ft = cm_to_ft(height)) # Make a new dataset, and that dataset includes a new column that has height in feet.
+
+dim(starwars_2) # Shows the dimension of the new dataset.
+colnames(starwars_2) # Shows the new dataset's column names.
+
+summary(starwars_2$height_ft) # Shows statistical summary of a column.
+
+ggplot(starwars_2, aes(height_ft)) + 
+  geom_histogram() # Drawing histogram by using ggplot, x-axis is the column and y-axis is count.
+
+sum(is.na(starwars_2$height_ft)) # The new dataset height_ft has 6 NA's
+max(starwars_2$height_ft) # So, it returns NA
+
+starwars_2 %>% filter(height_ft == max(height_ft)) # Filter the dataset with the condition that has the maximum height in feet. But since max(height_ft) is NA, the code does not work to show what we want to see. It shows nothing with this code.
+
+starwars_2 %>% filter(height_ft == max(height_ft, na.rm = TRUE)) # Filters the new data set to show a row with maximum height in feet.
+
+# https://starwars.fandom.com/wiki/Yarael_Poof
+```
+
+## EDA Practice
+
+Continue exploring the `starwars` data to gain additional insights, using [R4DS: Chapter 7](https://r4ds.had.co.nz/exploratory-data-analysis.html) as a guide.
+
+It is ok if you don't understand the all code in Chapter 7. (That is what we'll be learning the next two weeks!) If writing your own code is a struggle, try the "copy, paste, and tweak" method.
+
+#### Histogram
+
+```{r}
+ggplot(starwars) +
+  geom_bar(aes(sex)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+starwars %>% count(sex)
+```
+
+To examine the distribution of a continuous variable, use a histogram:
+```{r}
+ggplot(starwars) +
+  geom_histogram(aes(x = height), binwidth = 20)
+```
+
+```{r}
+starwars %>% count(cut_width(height, 20))
+```
+
+```{r}
+ggplot(filter(starwars, height < 220), aes(x = height)) +
+  geom_histogram(binwidth = 20)
+```
+
+```{r}
+ggplot(filter(starwars, height < 220), aes(x = height, color = sex)) +
+  geom_freqpoly(binwidth = 20) # By adding color, I can show multiple histogram
+```
+
+
+```{r}
+ggplot(filter(starwars, height <220), aes(x = height)) +
+  geom_histogram(binwidth = 1)
+```
+
+To make it easy to see the unusual values, we need to zoom to small values of the y-axis with coord_cartesian():
+
+```{r}
+ggplot(starwars, aes(x = mass)) +
+  geom_histogram(binwidth = 20) +
+  coord_cartesian(ylim = c(0, 5))
+```
+
+```{r}
+unusual <- starwars %>% filter(height <100 | height > 200) %>% select(name, height, mass) %>% arrange()
+
+unusual
+```
+
+
+#### Missing values
+
+```{r}
+star <- starwars %>% filter(between(height, 100, 200))
+star
+```
+
+use mutate() to replace the variable with a modified copy. You can use the ifelse() function to replace unusual values with NA. ifelse(condition, True, False).
+
+```{r}
+star <- starwars %>% mutate(height = ifelse(height < 100 | height > 201, NA, height))
+```
+
+- case_when() is particularly useful inside mutate when you want to create a new variable that relies on a complex combination of existing variables.
+
+```{r}
+ggplot(star, aes(x = height, y = mass)) +
+  geom_point(na.rm = TRUE)
+```
+
+```{r}
+nycflights13::flights %>% 
+  mutate(
+    cancelled = is.na(dep_time),
+    sched_hour = sched_dep_time %/% 100, # %/%: integral division ex) 5/3 = 1
+    sched_min = sched_dep_time %% 100, # %%: ex) 5/3 = 2
+    sched_dep_time = sched_hour + sched_min / 60
+  ) %>% 
+  ggplot(mapping = aes(sched_dep_time)) + 
+    geom_freqpoly(mapping = aes(colour = cancelled), binwidth = 1/4)
+```
+
+#### Covariation
+
+Covariation is the tendency for the values of two or more variables to vary together in a related way. 
+
+```{r}
+ggplot(starwars, aes(x = sex, y = height)) +
+  geom_boxplot() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+ggplot(starwars) +
+  geom_boxplot(aes(x = reorder(sex, height, FUN = median), y = height)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+ggplot(data = mpg) +
+  geom_boxplot(mapping = aes(x = reorder(class, hwy, FUN = median), y = hwy)) +
+  coord_flip()
+```
+
+#### Two categorical variables
+
+```{r}
+ggplot(starwars) +
+  geom_count(aes(x = sex, y = gender)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+starwars %>% count(gender, sex)
+```
+
+```{r}
+starwars %>% count(gender, sex) %>% ggplot(aes(x = sex, y = gender)) +
+  geom_tile(aes(fill = n))
+```
+
+#### Two continuous variables
+
+using the alpha aesthetic to add transparency.
+```{r}
+ggplot(starwars) +
+  geom_point(aes(x = mass, y = height), alpha = 1/3)
+```
+
+```{r}
+ggplot(starwars) +
+  geom_bin2d(aes(x = mass, y = height), alpha = 1/3)
+```
+
+Using boxplot for 2 continuous data.
+```{r}
+ggplot(starwars, aes(x = height, y = mass)) +
+  geom_boxplot(aes(group = cut_width(height, 20)))
+
+ggplot(data = diamonds, mapping = aes(x = carat, y = price)) + 
+  geom_boxplot(mapping = aes(group = cut_width(carat, 0.1)))
+```
+
+Display approximately the same number of points in each bin. That’s the job of cut_number():
+```{r}
+ggplot(starwars, aes(x = height, y = mass)) +
+  geom_boxplot(aes(group = cut_number(height, 5))) # produce 5 bins
+
+ggplot(data = diamonds, mapping = aes(x = carat, y = price)) + 
+  geom_boxplot(mapping = aes(group = cut_number(carat, 20))) # produce 20 bins
+```
+
+
+add_residual(): Add residuals to a data frame. Column name = resid
+```{r}
+library(modelr)
+
+mod <- lm(log(price) ~ log(carat), data = diamonds)
+
+diamonds2 <- diamonds %>% 
+  add_residuals(mod) %>% 
+  mutate(resid = exp(resid))
+
+ggplot(data = diamonds2) + 
+  geom_point(mapping = aes(x = carat, y = resid))
+```
+
+```{r}
+ggplot(data = diamonds2) + 
+  geom_boxplot(mapping = aes(x = cut, y = resid))
+```
+
+```{r}
+mod <- lm(height ~ mass, data = starwars)
+
+star <- starwars %>% 
+  add_residuals(mod) %>% 
+  mutate(resid = exp(resid))
+
+ggplot(data = star) + 
+  geom_point(mapping = aes(x = mass, y = resid))
+```
+
+```{r}
+ggplot(star) +
+  geom_boxplot(aes(x = sex, y = resid))
+```
+
+

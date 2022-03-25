@@ -1,0 +1,13 @@
+name: task_244
+title: Task 24
+username: jaewook
+account: jaewook
+server: shiny.byui.edu
+hostUrl: https://shiny.byui.edu/__api__
+appId: 1480
+bundleId: 3110
+url: https://shiny.byui.edu/content/43fbd0a3-2b86-45c3-a534-37b0fc008f0d/
+when: 1625708587.57372
+lastSyncTime: 1625708587.57372
+asMultiple: FALSE
+asStatic: FALSE

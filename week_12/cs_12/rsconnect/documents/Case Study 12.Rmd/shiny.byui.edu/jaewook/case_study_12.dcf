@@ -1,0 +1,13 @@
+name: case_study_12
+title: Case Study 12
+username: jaewook
+account: jaewook
+server: shiny.byui.edu
+hostUrl: https://shiny.byui.edu/__api__
+appId: 1501
+bundleId: 3145
+url: https://shiny.byui.edu/content/2dba5f48-4092-456f-b41f-b916c2714cbf/
+when: 1625865778.89052
+lastSyncTime: 1625865778.89052
+asMultiple: FALSE
+asStatic: FALSE

@@ -1,0 +1,72 @@
+---
+title: "Task 6"
+author: "Jae Wook Jung"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    toc_float: true
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(readr) # opens installed library
+library(tidyverse)
+library(ggplot2)
+library(pander)
+```
+
+#### Study the code below and run it one line at a time to see the output. Include the code in your final report. Add a detailed comment to each line that explains what that particular line/function is doing.
+
+```{r}
+rcw <- read_csv("https://byuistats.github.io/M335/data/rcw.csv", col_types = cols(Semester_Date = col_date(format = "%m/%d/%y"), Semester = col_factor(levels = c("Winter", "Spring", "Fall"))))
+
+# col_types = cols(): fix the type of the Semester_Date column by specifying that Semester_Date is a date column
+# and I can specify by col_double(), col_logical(), col_character(), col_date(format = "")
+
+head(rcw) # shows first six rows of the data set.
+str(rcw) # shows the data set structure.
+
+ggplot(data = rcw, 
+       mapping = aes(x = Semester_Date, 
+                     y = Count, 
+                     color = Department)) + # x-axis: Semester_Date, y-axis: Count, color by Departments 
+  geom_line() + # line plot
+  geom_point() # scatter plot
+```
+
+#### Create your own chart to show R&CW attendance trends over time. Use at least one new function you learned from the Doing Readings.
+
+```{r}
+rcw$Semester_Date = as.factor(rcw$Semester_Date)
+
+ggplot(rcw, aes(x = Semester_Date, y = Count)) +
+  geom_bar(stat = "identity", aes(fill = Department)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, color = "black"), axis.text.y = element_text(color = "black")) +
+  labs(title = "R&CW Attendance Trends Over Time \nby Departments",
+       y = "Attendees", x = "Dates")
+
+aggregate(rcw$Count, by=list(Date = rcw$Semester_Date), FUN=sum) %>% pander()
+```
+
+```{r}
+ggplot(rcw, aes(x = Semester_Date, y = Count)) + 
+  geom_bar(stat="identity", width = 0.25, fill = "steelblue") +
+  facet_wrap(~Department, nrow =2) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(title = "R&CW Attendance Trends Over Time \nby Departments", x = "Dates", y = "Attendees")
+```
+
+
+
+#### Write a short description of the trends you see in the graphs.
+We can not conclude which semester has the constantly high attendants for R&CW by seeing the data we have because the number of attendees are keep changing through time.
+The first graph shows the total attendees for each conference. The second graph shows more accurately of which departments students are attending to the conference. However, the first example graph shows much better information about comapring the nuber of attendees through graph.
+We can see that ME, CSEE, and Chem majors are the biggest attendees.

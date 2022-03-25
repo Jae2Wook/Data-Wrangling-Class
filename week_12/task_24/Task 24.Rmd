@@ -1,0 +1,43 @@
+---
+title: "Task 24"
+author: "Jae Wook Jung"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    code_folding: hide
+    toc: true
+    toc_float: true
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(tidyquant)
+library(dygraphs)
+library(quantmod)
+```
+
+```{r message=FALSE, warning=FALSE}
+KR <- tq_get("KR")
+
+KR <- KR %>% filter(date >= today() - years(5)) %>% filter(date < today()) %>% select(-symbol,)
+
+KR_xts <- timetk::tk_xts(data = KR, select = c(open, high, low, close, adjusted),  date_var = date)
+```
+
+```{r message=FALSE, warning=FALSE}
+dygraph(KR_xts) %>% 
+  dyRebase(value = 10000) %>% 
+  dyRangeSelector(dateWindow = c(today() - years(2), today())) %>% 
+  dyAnnotation("2020-03-18", text = "A", tooltip = "Kroger Board of Directors Declares Quarterly Dividend") %>% 
+  dyAnnotation("2021-01-27", text = "B", tooltip = "Kevin Brown and Amanda Sourry Elected to Kroger Board of Directors")
+```
+
+An investor could almost doubled his money in two years. Seeing for 5 years chart, Kroger is a growing company. There were two spikes on March 18, 2020 and January 27, 2021. I don't know why there were two spikes. According to the Kroger press, there were news about dividend and change in board of directors. However, two big spikes had big fall too.

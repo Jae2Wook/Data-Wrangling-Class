@@ -1,0 +1,47 @@
+---
+title: "Task 23"
+author: "Jae Wook Jung"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    code_folding: hide
+    toc: true
+    toc_float: true
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(leaflet)
+```
+
+```{r message=FALSE, warning=FALSE}
+haticon <- makeIcon(iconUrl = "https://static.vecteezy.com/system/resources/previews/001/209/031/non_2x/graduation-hat-png.png",
+                    iconWidth = 64, iconHeight = 64,
+                    iconAnchorX = 22, iconAnchorY = 94)
+```
+
+```{r message=FALSE, warning=FALSE}
+content <- paste(sep = "<br/>",
+                 "<b><a href = 'https://apply.grad.ucsd.edu/departments/economics'>Univ of California San Diego</a></b>",
+                 "Sequoyah Hall",
+                 "Economics Department")
+```
+
+```{r message=FALSE, warning=FALSE}
+m <- leaflet() %>%
+  setView(lng = -117.2405, lat = 32.8821, zoom = 12) %>% 
+  addProviderTiles(providers$Esri.NatGeoWorldMap) %>% 
+  #addMarkers(~long, ~lat, icon = haticon)
+  addPopups(lng = -117.2405, lat = 32.8821, content, options = popupOptions(closeButton = FALSE))
+
+m
+```
+

@@ -1,0 +1,193 @@
+---
+title: "Project COVID-19"
+author: "Jae Wook Jung"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output: flexdashboard::flex_dashboard
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(fig.width = 12, fig.asp = 1/2, fig.fullwidth = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(flexdashboard)
+library(tidyverse)
+library(rgdal)
+library(downloader)
+library(sf)
+library(fs)
+library(gganimate)
+library(gifski)
+library(transformr)
+library(lubridate)
+```
+
+```{r message=FALSE, warning=FALSE}
+my_URL <- "http://thematicmapping.org/downloads/TM_WORLD_BORDERS_SIMPL-0.3.zip"
+
+df <- tempfile() # put the file
+uf <- tempfile() # directory
+download(my_URL, df, mode = "wb")
+unzip(df, exdir = uf)
+my_map <- read_sf(uf)
+file_delete(df)
+dir_delete(uf)
+
+data <- read_csv("https://covid19.who.int/WHO-COVID-19-global-data.csv")
+
+data <- na.omit(data)
+
+colnames(my_map)[2] <- "Country_code"
+
+data <- left_join(data, my_map, by = "Country_code") %>% select("Date_reported", "Country_code", "Country", "New_cases", "LON", "LAT", "geometry")
+
+# data[rowSums(is.na(data)) > 0,]
+
+data <- data %>% filter(Country_code != "XA")
+data <- data %>% filter(Country_code != "XK")
+data <- data %>% filter(Country_code != "CW")
+data <- data %>% filter(Country_code != "XC")
+data <- data %>% filter(Country_code != "XB")
+data <- data %>% filter(Country_code != "SX")
+data <- data %>% filter(Country_code != "SS")
+```
+
+
+## Column 1
+
+### World COVID-19 Map
+
+```{r message=FALSE, warning=FALSE}
+world <- map_data("world")
+
+p <- ggplot(data) +
+  geom_map(
+    data = world, map = world,
+    aes(long, lat, map_id = region),
+    color = "black", fill = "transparent", size = 0.01
+  ) +
+  theme_bw() +
+  #geom_polygon(data, mapping = aes(x = LON, y = LAT, group = Country_code, fill = New_cases/ 100000)) +
+  #scale_fill_gradient(low = "white", high = "red") +
+  geom_point(data, mapping = aes(x = LON, y = LAT, group = Country_code, size = New_cases/ 100000), color = "red") +
+  theme(legend.position = "bottomleft", panel.grid = element_blank(), panel.border = element_blank(), axis.text.x = element_blank(), axis.text.y = element_blank()) +
+  theme_void() +
+  labs(title = "World COVID-19 Time Series", subtitle = "Date: {frame_time}", size = "New Cases\n(100,000)") +
+  transition_time(Date_reported)
+  
+animate(p, renderer = gifski_renderer())
+```
+
+### COVID-19 World & U.S. & India Status
+
+```{r message=FALSE, warning=FALSE}
+World <- data %>% group_by(Date_reported) %>% summarise(New_cases = sum(New_cases))
+World$Country_code <- "World"
+
+US <- data %>% filter(Country_code %in% c("US", "IN")) %>% select(Date_reported, New_cases, Country_code)
+
+worldUS <- rbind(World, US)
+```
+
+```{r message=FALSE, warning=FALSE}
+options(scipen = 999)
+p1 <- ggplot(worldUS) +
+  geom_line(aes(x = Date_reported, y = New_cases, color = Country_code, group = Country_code)) +
+  geom_point(aes(x = Date_reported, y = New_cases, color = Country_code, group = Country_code), size = 1.5) +
+  scale_y_continuous(labels = scales::comma) +
+  geom_segment(aes(x = Date_reported, y = New_cases, xend = max(data$Date_reported), yend = New_cases, group = Country_code), linetype = 2, colour = 'grey') + 
+  geom_text(aes(x = max(data$Date_reported) - 10, y= New_cases, label = New_cases, group = Country_code), hjust = 0) +
+  geom_vline(xintercept = ymd("20201214"), linetype = "dashed", color = "red", size = 0.75) +
+  scale_color_manual(values = c("darkgreen", "blue", "tomato2")) +
+  annotate("text", x = ymd("20201220"),y = 100000, label = "U.S. Vacciantion Start", angle = 90, size = 3, color = "red") +
+  #ggrepel::geom_label_repel(data = data %>% filter(Country_code %in% c("US", "GB", "IN")), mapping = aes(x = Date_reported, y = New_cases, label = New_cases), nudge_y = -2) +
+  transition_reveal(Date_reported) +
+  labs(title = "COVID-19 Daily New Cases", x = "Date", y = "New Cases", color = "none") +
+  theme_bw()
+
+
+animate(p1, renderer = gifski_renderer())
+```
+
+## Column 2
+
+$\bullet$ $\textbf{Background}$\
+I was interested in motion graphs in the beginning of the semester. The Corona Virus Disease - 2019 (COVID-19) is still a big issue nowadays, I thought it will be fun to make time series graphs.
+
+$\bullet$ $\textbf{COVID-19 Timeline}$
+
+End of 2019\
+\setlength{\leftskip}{2cm}
+   The first COVID-19 cases were detected in Wuhan, China.\
+\setlength{\leftskip}{0pt}
+\
+December, 2019\
+\setlength{\leftskip}{2cm}
+   Dr. Douglas Dwyer asked for detailed data about COVID-19, but it got rejected$^1$.\
+\setlength{\leftskip}{0pt}
+\
+31 December, 2019\
+\setlength{\leftskip}{2cm}
+  China's Wuhan Municipal Health Commission reported that a cluster pneumonia case occurred in Wuhan City, Hubei Province$^2$.\
+\setlength{\leftskip}{0pt}
+\
+12 January, 2020\
+\setlength{\leftskip}{2cm}
+   China publicly shared the COVID-19 gene sequence$^2$.\
+\setlength{\leftskip}{0pt}
+\
+22 January, 2020\
+\setlength{\leftskip}{2cm}
+   WHO director-general Tedros Adhanom Ghebreyesus, virologists, public-health researchers, and certain government representatives did closed-door meeting and decided Public Health Emergency of International Concern (PHEIC) uncertain. However, they flipped their decision a week later$^3$.\
+\setlength{\leftskip}{0pt}
+\
+20 February - 7 April, 2020\
+\setlength{\leftskip}{2cm}
+   The U.S. stock market crash$^4$. Dow Jones Industrial Average (DJIA) fell about 30% (22859.6 points which are close to 2017 February points) of its value in a month$^5$.\
+\setlength{\leftskip}{0pt}
+\
+11 March, 2020\
+\setlength{\leftskip}{2cm}
+   WHO announced COVID-19 as a pandemic$^6$.\
+\setlength{\leftskip}{0pt}
+\
+13 March, 2020\
+\setlength{\leftskip}{2cm}
+   Travel ban on non-US citizens$^6$.\
+\setlength{\leftskip}{0pt}
+\
+19 March, 2020\
+\setlength{\leftskip}{2cm}
+   California ordered a Stay-at-Home order statewide for the first out of all the states$^6$.\
+\setlength{\leftskip}{0pt}
+\
+14 December, 2020\
+\setlength{\leftskip}{2cm}
+   The first COVID-19 vaccination in the U.S given to public. A nurse in New York got Pfizer vaccine$^7$.\
+\setlength{\leftskip}{0pt}
+\
+February - June, 2021\
+\setlength{\leftskip}{2cm}
+   The second wave in India. An average of 10,000 confirmed cases a day$^8$.\
+\setlength{\leftskip}{0pt}
+\
+14 May, 2021\
+\setlength{\leftskip}{2cm}
+   Centers of Disease Control (CDC) announced that fully vaccinated people don't have to wear masks$^9$.\
+\setlength{\leftskip}{0pt}
+
+
+$\bullet$ $\textbf{Sources}$\
+COVID-19 Data: [WTO COVID-19 Dashboard](https://covid19.who.int/)\
+Map Coordiante Data: [thematicmapping](http://thematicmapping.org)
+
+$^1$ https://www.bbc.com/news/world-asia-china-56054468 \
+$^2$ https://www.who.int/news/item/27-04-2020-who-timeline---covid-19 \
+$^3$ https://www.nature.com/articles/d41586-021-00162-4 \
+$^4$ https://en.wikipedia.org/wiki/2020_stock_market_crash \
+$^5$ https://www.macrotrends.net/1319/dow-jones-100-year-historical-chart \
+$^6$ https://www.ajmc.com/view/a-timeline-of-covid19-developments-in-2020 \
+$^7$ https://www.wsj.com/articles/covid-19-vaccinations-in-the-u-s-slated-to-begin-monday-11607941806 \
+$^8$ https://www.cnbc.com/2021/05/03/india-covid-crisis-charts-show-the-severity-of-the-second-wave.html \
+$^9$ https://www.cnbc.com/2021/05/13/cdc-says-fully-vaccinated-people-dont-need-to-wear-face-masks-indoors-or-outdoors-in-most-settings.html
+

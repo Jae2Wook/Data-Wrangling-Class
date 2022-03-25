@@ -1,0 +1,88 @@
+---
+title: "Task 9"
+author: "Jae Wook Jung"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+output:
+  html_document:  
+    keep_md: true
+    toc: true
+    code_folding: hide
+    toc_float: true
+    fig_height: 6
+    fig_width: 12
+    fig_align: 'center'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(readr)
+library(knitr)
+library(pander)
+
+data <- read_rds(url("https://github.com/byuistats/data/blob/master/Dart_Expert_Dow_6month_anova/Dart_Expert_Dow_6month_anova.RDS?raw=true"))
+
+```
+
+
+#### First, create a time series plot that shows the six-month returns (y-axis) across time (x-axis) for PROS, DARTS, and DJIA
+
+```{r}
+ggplot(data, aes(x = contest_period, y = value, group = variable, color = variable)) +
+  geom_line()
+```
+
+Seems DJIA has the least fluctuation return but small. 
+
+PROS has the most high returns and fluctuates a lot.
+
+I cannot say how much DARTS is different from PROS. DARTS fluctuates a lot and sometimes has high returns.
+
+#### Now we need to "tidy" the data. Use the contestant_period column to create new month_end and year_end columns. (Try using separate() and/or extract() from tidyr. Save your tidy data as an .rds object)
+
+```{r}
+tidy_data <- data %>% 
+  separate(contest_period, c("month_start", "month_end_year"), sep = "-") %>% 
+  separate(month_end_year, c("month_end", "year_end"), sep = -4) %>% 
+  select(-month_start)
+
+tidy_data
+
+saveRDS(tidy_data, "tidy_data.rds")
+```
+
+#### Using the new columns created above, write code that outputs a tibble of the DJIA returns that matches (as closely as possible) the table shown below (aka, “pivot_wider” the data).
+
+```{r}
+DJIA_data <- tidy_data %>% filter(variable == "DJIA")
+
+DJIA_data <- DJIA_data %>% mutate(month_end = stringr::str_replace(month_end, "Dec.", "December")) %>% 
+  mutate(month_end = stringr::str_replace(month_end, "Febuary", "February")) %>% 
+  mutate(month_end = stringr::str_replace(month_end, "Decembermber", "December"))
+
+DJIA_wide <- DJIA_data %>% 
+  pivot_wider(names_from = year_end, values_from = value) %>% 
+  mutate(Month = case_when(
+    month_end %in% "January" ~ 1,
+    month_end %in% 'February' ~ 2,
+    month_end %in% "March" ~ 3,
+    month_end %in% "April" ~ 4,
+    month_end %in% "May" ~ 5,
+    month_end %in% "June" ~ 6,
+    month_end %in% "July" ~ 7,
+    month_end %in% "August" ~ 8,
+    month_end %in% "September" ~ 9,
+    month_end %in% "October" ~ 10,
+    month_end %in% "November" ~ 11,
+    month_end %in% "December" ~ 12
+  )) %>% 
+  arrange(Month) %>% select(-c(variable, Month))
+
+colnames(DJIA_wide)[which(names(DJIA_wide) == "month_end")] <- "Month"
+
+DJIA_wide %>% kable()
+```
+
